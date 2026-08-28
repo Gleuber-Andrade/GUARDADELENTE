@@ -68,10 +68,12 @@
   .fm-title .t1{font-weight:800; font-size:1.05rem;}
   .fm-title .t2{font-weight:700; font-size:0.95rem;}
   .fm-meta{font-size:0.78rem; text-align:center;}
-  .fm-field{padding:4px 8px; font-size:0.82rem;}
+  .fm-field{padding:4px 8px; font-size:0.82rem; text-align:center;}
   .fm-dyn:empty::after{content:"—"; color:#aaa; font-style:italic; font-weight:400;}
   .fm-section-head{background:var(--navy); color:#fff; font-weight:700; text-align:center;}
-  .fm-col-head{background:var(--gray); font-weight:700; text-align:center; font-size:0.72rem; white-space:nowrap;}
+  .fm-col-head{background:var(--gray); font-weight:700; text-align:center; font-size:0.72rem; white-space:nowrap; position:relative;}
+  .fm-resize-handle{position:absolute; top:0; right:0; width:6px; height:100%; cursor:col-resize; user-select:none;}
+  .fm-resize-handle:hover, .fm-resize-handle.resizing{background:rgba(0,0,0,0.18);}
   .fm-data td{text-align:center; font-size:0.72rem; white-space:nowrap; line-height:1.3;}
   .fm-empty-msg{text-align:center; font-style:italic; color:#888; padding:18px 8px !important; font-size:0.85rem !important; white-space:normal !important;}
   .readonly-badge{display:inline-block; background:#fff3cd; color:#7a5b00; border:1px solid #ffe08a; padding:4px 10px; border-radius:6px; font-size:0.8rem; font-weight:600; margin-bottom:12px;}
@@ -115,10 +117,12 @@
       </div>
       <div class="toolbar" id="registroBasesArea" style="display:none;">
         <select id="seletorBases" class="btn secondary" style="cursor:pointer;"></select>
+        <button class="btn" onclick="ativarBaseSelecionada()">✅ Usar Esta Base para Bipar/Imprimir</button>
         <button class="btn secondary" onclick="exportarBaseEscolhidaCSV()">⬇️ Exportar Base Escolhida (CSV)</button>
+        <button class="btn secondary" onclick="atualizarListaBasesDoServidor()">🔄 Atualizar Lista de Bases</button>
         <button class="btn danger" onclick="excluirBaseSelecionada()">🗑️ Excluir Base Selecionada</button>
       </div>
-      <div style="font-size:0.75rem; color:#888; margin-top:6px;">Excluir uma base remove só os dados dela — o histórico de leituras já feitas continua salvo e aparece no relatório de confronto.</div>
+      <div style="font-size:0.75rem; color:#888; margin-top:6px;">Se você carregou mais de um arquivo, escolha aqui qual base fica ativa para bipar e imprimir — a base ativa é a última marcada com "✅ Usar Esta Base". Excluir uma base remove só os dados dela — o histórico de leituras já feitas continua salvo e aparece no relatório de confronto.</div>
     </div>
 
     <div class="card">
@@ -149,6 +153,14 @@
     </div>
 
     <div class="card">
+      <h2>Últimas leituras (sessão atual)</h2>
+      <table class="hist">
+        <thead><tr><th>Hora</th><th>Código Lido</th><th>Serial</th><th>Posição</th><th>Status</th></tr></thead>
+        <tbody id="histBody"></tbody>
+      </table>
+    </div>
+
+    <div class="card">
       <h2>Relatório de Confronto <span style="font-weight:400; font-size:0.75rem; color:#888;">(bipado x arquivo carregado)</span></h2>
       <div style="font-size:0.82rem; color:#555; margin-bottom:10px;">
         Compara todo o histórico de leituras já feitas com os itens da base ativa, mostrando o que já foi
@@ -170,14 +182,6 @@
       </table>
     </div>
 
-    <div class="card">
-      <h2>Últimas leituras (sessão atual)</h2>
-      <table class="hist">
-        <thead><tr><th>Hora</th><th>Código Lido</th><th>Serial</th><th>Posição</th><th>Status</th></tr></thead>
-        <tbody id="histBody"></tbody>
-      </table>
-    </div>
-
   </section>
 
   <section id="tab-fm" style="display:none;">
@@ -187,10 +191,17 @@
         botão abaixo apenas para imprimir.</div>
       <div class="toolbar no-print">
         <button class="btn" onclick="window.print()">🖨️ Imprimir</button>
+        <button class="btn secondary" onclick="redefinirLargurasColunasFm()">↔️ Redefinir Larguras das Colunas</button>
       </div>
+      <div style="font-size:0.75rem; color:#888; margin: -6px 0 6px;" class="no-print">Dica: arraste a borda direita de qualquer coluna da tabela abaixo para ajustar a largura manualmente. O ajuste fica salvo.</div>
 
       <div id="fm-doc">
         <table id="fmDocTable">
+          <colgroup id="fmColgroup">
+            <col id="fmCol0"><col id="fmCol1"><col id="fmCol2"><col id="fmCol3">
+            <col id="fmCol4"><col id="fmCol5"><col id="fmCol6"><col id="fmCol7">
+            <col id="fmCol8"><col id="fmCol9"><col id="fmCol10">
+          </colgroup>
           <thead>
           <tr>
             <td rowspan="2" colspan="2" class="fm-logo-cell">
@@ -227,17 +238,17 @@
             <td class="fm-section-head">OBSERVAÇÃO</td>
           </tr>
           <tr>
-            <th class="fm-col-head" id="thPosOrigem">POSIÇÃO</th>
-            <th class="fm-col-head" id="thStatusOrigem">STATUS</th>
-            <th class="fm-col-head" id="thSku">SKU</th>
-            <th class="fm-col-head" id="thLote">LOTE</th>
-            <th class="fm-col-head" id="thSerie">SÉRIE</th>
-            <th class="fm-col-head" id="thQuant">QUANT.</th>
-            <th class="fm-col-head" id="thNfd">NFD( ) REMESSA( )</th>
-            <th class="fm-col-head" id="thCategoria">CATEGORIA</th>
-            <th class="fm-col-head" id="thPosDestino">POSIÇÃO</th>
-            <th class="fm-col-head" id="thStatusDestino">STATUS</th>
-            <th class="fm-col-head" id="thBusca"></th>
+            <th class="fm-col-head" id="thPosOrigem">POSIÇÃO<span class="fm-resize-handle no-print" data-col="0"></span></th>
+            <th class="fm-col-head" id="thStatusOrigem">STATUS<span class="fm-resize-handle no-print" data-col="1"></span></th>
+            <th class="fm-col-head" id="thSku">SKU<span class="fm-resize-handle no-print" data-col="2"></span></th>
+            <th class="fm-col-head" id="thLote">LOTE<span class="fm-resize-handle no-print" data-col="3"></span></th>
+            <th class="fm-col-head" id="thSerie">SÉRIE<span class="fm-resize-handle no-print" data-col="4"></span></th>
+            <th class="fm-col-head" id="thQuant">QUANT.<span class="fm-resize-handle no-print" data-col="5"></span></th>
+            <th class="fm-col-head" id="thNfd">NFD( ) REMESSA( )<span class="fm-resize-handle no-print" data-col="6"></span></th>
+            <th class="fm-col-head" id="thCategoria">CATEGORIA<span class="fm-resize-handle no-print" data-col="7"></span></th>
+            <th class="fm-col-head" id="thPosDestino">POSIÇÃO<span class="fm-resize-handle no-print" data-col="8"></span></th>
+            <th class="fm-col-head" id="thStatusDestino">STATUS<span class="fm-resize-handle no-print" data-col="9"></span></th>
+            <th class="fm-col-head" id="thBusca"><span class="fm-resize-handle no-print" data-col="10"></span></th>
           </tr>
           </thead>
           <tbody id="fmDataTable"></tbody>
@@ -408,7 +419,7 @@ function limparHistoricoDoBanco(){
 // de nenhum botão ou campo na tela. Deixando em branco, continua
 // funcionando 100% local (IndexedDB), como antes.
 // =========================================================
-const API_BASE_URL = 'https://gleuber-andrade.github.io/GUARDADELENTE/';   // <-- cole aqui a URL da Edge Function do Supabase (ex: 'https://seu-projeto.supabase.co/functions/v1/api')
+const API_BASE_URL = '';   // <-- cole aqui a URL da Edge Function do Supabase (ex: 'https://seu-projeto.supabase.co/functions/v1/api')
 const API_KEY = '';        // <-- opcional: mesma chave configurada no server.js (variável API_KEY)
 
 let apiConfig = { baseUrl: API_BASE_URL, apiKey: API_KEY };
@@ -476,6 +487,19 @@ async function excluirBaseNoBancoAtivo(id){
   return excluirBaseDoBanco(id);
 }
 
+// Busca a lista de bases direto do banco ativo (externo ou local) — usado
+// para "Atualizar Lista de Bases", pra ver o que outros computadores já
+// carregaram, sem precisar recarregar a página inteira.
+async function carregarBasesDoBancoAtivo(){
+  if(usandoBancoExterno){
+    const resp = await fetch(apiConfig.baseUrl + '/bases', {headers: cabecalhosApi()});
+    if(!resp.ok) throw new Error('HTTP ' + resp.status);
+    return await resp.json();
+  }
+  if(!dbLocal) return [];
+  return carregarBasesDoBanco();
+}
+
 async function carregarHistoricoDoBancoAtivo(){
   if(usandoBancoExterno){
     const resp = await fetch(apiConfig.baseUrl + '/historico', {headers:cabecalhosApi()});
@@ -506,6 +530,74 @@ async function limparHistoricoDoBancoAtivo(){
   }
   if(!dbLocal) return;
   return limparHistoricoDoBanco();
+}
+
+// =========================================================
+// LARGURA DAS COLUNAS DO FM-EMB23 — ajuste manual
+// Arraste a borda direita de qualquer coluna para redimensionar.
+// O ajuste fica salvo no banco de dados local deste computador.
+// =========================================================
+function habilitarRedimensionamentoColunas(){
+  const handles = document.querySelectorAll('.fm-resize-handle');
+  handles.forEach(handle => {
+    handle.addEventListener('mousedown', function(e){
+      e.preventDefault();
+      const colIdx = handle.dataset.col;
+      const th = handle.closest('th');
+      const table = document.getElementById('fmDocTable');
+      const startX = e.clientX;
+      const startWidth = th.offsetWidth;
+      const tableWidth = table.offsetWidth;
+      handle.classList.add('resizing');
+
+      function onMouseMove(ev){
+        const delta = ev.clientX - startX;
+        const newWidthPx = Math.max(30, startWidth + delta);
+        const newWidthPct = (newWidthPx / tableWidth * 100).toFixed(2) + '%';
+        const col = document.getElementById('fmCol'+colIdx);
+        if(col) col.style.width = newWidthPct;
+      }
+      function onMouseUp(){
+        document.removeEventListener('mousemove', onMouseMove);
+        document.removeEventListener('mouseup', onMouseUp);
+        handle.classList.remove('resizing');
+        salvarLargurasColunasFm();
+      }
+      document.addEventListener('mousemove', onMouseMove);
+      document.addEventListener('mouseup', onMouseUp);
+    });
+  });
+}
+
+async function salvarLargurasColunasFm(){
+  const larguras = [];
+  for(let i=0; i<11; i++){
+    const col = document.getElementById('fmCol'+i);
+    larguras.push(col ? (col.style.width || '') : '');
+  }
+  if(dbLocal){
+    try{ await salvarConfigLocal('larguraColunasFm', larguras); }catch(e){ console.error('Erro ao salvar larguras das colunas:', e); }
+  }
+}
+
+async function carregarLargurasColunasFm(){
+  if(!dbLocal) return;
+  try{
+    const larguras = await carregarConfigLocal('larguraColunasFm');
+    if(larguras && Array.isArray(larguras)){
+      larguras.forEach((w, i) => {
+        if(w){ const col = document.getElementById('fmCol'+i); if(col) col.style.width = w; }
+      });
+    }
+  }catch(e){ console.error('Erro ao carregar larguras das colunas:', e); }
+}
+
+function redefinirLargurasColunasFm(){
+  for(let i=0; i<11; i++){
+    const col = document.getElementById('fmCol'+i);
+    if(col) col.style.width = '';
+  }
+  salvarLargurasColunasFm();
 }
 
 function ativarBase(entrada){
@@ -541,6 +633,7 @@ async function inicializarBancoLocal(){
     }
 
     corteContadores = (await carregarConfigLocal('corteContadores')) || -1;
+    await carregarLargurasColunasFm();
 
     const hist = await carregarHistoricoDoBancoAtivo();
     const posCorte = hist.filter(h => (h.ts||0) > corteContadores);
@@ -583,9 +676,9 @@ function extrairSerial(codigo){
     case 53: return codigo.substr(44,9);
     case 58: return codigo.slice(-9);
     case 59: return codigo.slice(-9);
-    case 21: return codigo.substr(2,11);
+    case 21: return codigo.substr(1,11);
     default:
-      return (n > 11) ? codigo.substr(2,11) : codigo;
+      return (n > 11) ? codigo.substr(1,11) : codigo;
   }
 }
 
@@ -915,6 +1008,33 @@ function atualizarSeletorBases(){
   sel.selectedIndex = basesCarregadas.length - 1; // seleciona a mais recente por padrão
 }
 
+// Ativa, para bipagem/impressão, a base escolhida no seletor — sem isso o
+// sistema sempre usava só a última carregada, o que atrapalhava quando
+// havia mais de um arquivo carregado ao mesmo tempo.
+function ativarBaseSelecionada(){
+  const sel = document.getElementById('seletorBases');
+  const idx = parseInt(sel.value, 10);
+  const entrada = basesCarregadas[idx];
+  if(!entrada){ alert('Nenhuma base selecionada.'); return; }
+  ativarBase(entrada);
+  alert('Base "'+entrada.nome+'" ativada — já pode bipar e imprimir usando ela.');
+}
+
+// Busca de novo a lista de bases no banco ativo, sem recarregar a página.
+// Útil em uso com vários computadores: se outra pessoa carregou uma base
+// nova enquanto sua tela já estava aberta, ela só aparece aqui depois de
+// clicar em atualizar (não há sincronização automática em tempo real).
+async function atualizarListaBasesDoServidor(){
+  try{
+    basesCarregadas = await carregarBasesDoBancoAtivo();
+    atualizarSeletorBases();
+    alert('Lista atualizada: ' + basesCarregadas.length + ' base(s) encontrada(s) ' +
+      (usandoBancoExterno ? 'no banco de dados compartilhado.' : 'neste computador.'));
+  }catch(err){
+    alert('Erro ao atualizar a lista de bases: ' + err.message);
+  }
+}
+
 function exportarBaseEscolhidaCSV(){
   const sel = document.getElementById('seletorBases');
   const idx = parseInt(sel.value, 10);
@@ -1067,6 +1187,7 @@ document.getElementById('scanInput').addEventListener('keydown', function(e){
 
 montarFmDoc();
 atualizarDataHoraFm();
+habilitarRedimensionamentoColunas();
 inicializarBancoLocal();
 </script>
 
