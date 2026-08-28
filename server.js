@@ -10,6 +10,7 @@
 // =========================================================
 
 const express = require('express');
+const path = require('path');
 const cors = require('cors');
 const { createClient } = require('@supabase/supabase-js');
 
@@ -18,6 +19,13 @@ app.use(express.json({ limit: '5mb' }));
 
 const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN || '*';
 app.use(cors({ origin: ALLOWED_ORIGIN }));
+
+// Serve o sistema (guarda_de_lentes_sistema.html, salvo aqui como
+// public/index.html) direto na raiz do site. Fica ANTES da trava de
+// senha da API, para a pagina sempre carregar livremente - so as rotas
+// de dados (/bases, /historico) ficam protegidas quando API_KEY estiver
+// configurada.
+app.use(express.static(path.join(__dirname, 'public')));
 
 const supabase = createClient(
   process.env.SUPABASE_URL,
@@ -61,7 +69,9 @@ function historicoParaApi(row) {
   };
 }
 
-app.get('/', (req, res) => {
+// health check simples - usado por voce para conferir se o servidor esta
+// no ar sem precisar abrir o sistema inteiro
+app.get('/health', (req, res) => {
   res.json({ ok: true, servico: 'Guarda de Lentes API', banco: 'Supabase' });
 });
 
